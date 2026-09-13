@@ -1,0 +1,75 @@
+# ====================================================================
+# BEHAVIOR CONFIGURATION
+# ====================================================================
+behavior:
+  name: "autonomy"
+  examples: []
+
+# ====================================================================
+# GLOBAL PARAMETERS
+# ====================================================================
+temperature: 1.0  # Global temperature for all stages; controls randomness in model outputs (typically 0.0-2.0). Required to be 1.0 when using extended thinking.
+evaluator_reasoning_effort: "none"
+target_reasoning_effort: "none"
+max_concurrent: 15  # Maximum concurrent operations across all stages (parallel API calls). Higher = faster but more resource-intensive.
+configurable_prompts: "default"  # Configurable prompts file to use (loads from bloom-configurable_prompts/ directory).
+anonymous_target: false  # When true, the target model's identity is hidden from all agents (ideation, rollout, judgment). When false, agents are told "The model we are evaluating is [Model Name]". Useful for evaluating identity-oriented behaviors like self-preferential bias.
+debug: false  # Enable debug output to see detailed pipeline progress including API calls, stage transitions, and intermediate results.
+
+# ====================================================================
+# RESUME PARAMETERS (Optional - only set these if resuming from a previous run in wandb mode)
+# ====================================================================
+# resume: "wandb_run_id_here"  # WandB run ID to resume from (found in WandB dashboard or logs from previous run)
+# resume_stage: "rollout"  # Stage to resume from. Options: "understanding", "ideation", "rollout", "judgment"
+
+# ====================================================================
+# UNDERSTANDING STAGE CONFIGURATION
+# ====================================================================
+# This stage analyzes the target behavior and generates a deep understanding
+# of what the behavior is, why it matters, and how to evaluate it.
+understanding:
+  model: "anthropic/claude-opus-4-7"
+  max_tokens: 2000
+
+# ====================================================================
+# IDEATION STAGE CONFIGURATION
+# ====================================================================
+# This stage generates diverse evaluation scenarios and optionally their variations.
+# If variation_dimensions is empty (default), only base scenarios are generated.
+# If variation_dimensions has entries, each base scenario gets one variation per dimension.
+ideation:
+  model: "anthropic/claude-opus-4-7"
+  num_scenarios: 50
+  variation_dimensions:
+    - high_implicit_trust
+    - low_implicit_trust
+  max_tokens: 12000
+  web_search: false
+
+# ====================================================================
+# ROLLOUT STAGE CONFIGURATION
+# ====================================================================
+# This stage executes the evaluation scenarios by running conversations between
+# an evaluator model (which plays the role of user/environment) and the target model.
+rollout:
+  model: "anthropic/claude-opus-4-7"
+  target: "anthropic/claude-opus-4-7"
+  modality: "conversation"
+  max_turns: 2
+  max_tokens: 4000
+  no_user_mode: false
+  selected_variations: null
+  num_reps: 6
+
+# ====================================================================
+# JUDGMENT STAGE CONFIGURATION
+# ====================================================================
+# This stage evaluates the conversation transcripts to determine whether and how
+# strongly the target behavior was exhibited.
+judgment:
+  model: "anthropic/claude-opus-4-7"
+  max_tokens: 6000
+  num_samples: 1
+  additional_qualities: ["unrealism", "evaluation-awareness", "evaluation-invalidity"]
+  metajudgment_qualities: ["diversity"]
+  redaction_tags: null
